@@ -1,0 +1,73 @@
+FROM keymetrics/pm2:latest-alpine
+
+##############################
+# Install the Sub Enviroment #
+##############################
+
+RUN pm2 update
+RUN pm2 install pm2-server-monit
+RUN apk update && apk add \
+    curl \
+    nginx \
+    git \
+    # python3 \
+    # pip3 \
+    unzip
+ADD https://releases.hashicorp.com/consul-template/0.11.1/consul-template_0.11.1_linux_amd64.zip /tmp/consul-template.zip
+RUN cd /tmp && unzip /tmp/consul-template.zip && mv /tmp/consul-template /bin/consul-template
+# COPY ./config /config
+# COPY ./scripts /scripts
+# COPY ./canis-majoris/dist /usr/share/nginx/html
+# RUN pip3 install dumb-init
+
+############################
+# Now install the frontend #
+############################
+
+WORKDIR /src
+
+COPY ./envs/nginx ./nginx
+
+# WORKDIR /src/nginx
+RUN ls -la ./nginx
+
+RUN chmod +x ./nginx/*.sh
+# RUN ./nginx/install-sub-env.sh
+
+
+WORKDIR /src
+# Setup subsystem (consul, nginx)
+
+
+# Now install the application
+
+COPY ./ecosystem.config.js .
+# install packages first if this fails we dont need to copy everything (saves time)
+COPY ./build/package.json .
+COPY ./build/package-lock.json .
+
+
+
+RUN npm install --production
+COPY ./build .
+
+# Show fodler structure in logs
+RUN ls -al -R
+
+ENV NPM_CONFIG_LOGLEVEL warn
+# ENV UNSAFE_SERVER $UNSAFE_SERVER
+# ENV NODE_ENV production
+
+# Expose the listening port of your app
+# Application
+EXPOSE 3000/tcp
+# KeyMetrics Output
+# EXPOSE 9615 # only if --web is active
+
+# 80 push metrics protocol
+# 43554 reverse interaction protocol
+
+CMD [ "pm2-runtime", "start", "/src/ecosystem.config.js" ]
+
+# TEMP For now
+# docker run -p 9615:9615 -p 3000:3000 -e "KEYMETRICS_PUBLIC=32wqwkvk1hhfveu" -e "KEYMETRICS_SECRET=ffayphfltgaq4qg" b6a3a2b0a77b

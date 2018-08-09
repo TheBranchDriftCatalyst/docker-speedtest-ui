@@ -1,0 +1,17 @@
+[ignore]
+.*/build
+.*/docs
+.*/node_modules
+.*/public
+.*/flow-typed
+.*/envs
+
+[include]
+
+[libs]
+
+[options]
+module.system.node.resolve_dirname=node_modules
+esproposal.decorators=ignore
+module.file_ext=.scss
+module.file_ext=.md
