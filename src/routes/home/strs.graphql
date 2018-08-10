@@ -1,0 +1,12 @@
+query GetAllSTRs {
+  speedTestSamples: databaseGetAllSTRs {
+    download
+    upload
+    originalUpload
+    originalDownload
+    createdAt
+    updatedAt
+    timestamp
+    index
+  }
+}

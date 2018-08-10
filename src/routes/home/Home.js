@@ -1,55 +1,140 @@
-/**
- * React Starter Kit (https://www.reactstarterkit.com/)
- *
- * Copyright © 2014-present Kriasoft, LLC. All rights reserved.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
+/* @flow */
 import React from 'react';
-import PropTypes from 'prop-types';
 import { graphql, compose } from 'react-apollo';
 import withStyles from 'isomorphic-style-loader/lib/withStyles';
-import newsQuery from './news.graphql';
+import { LineChart, XAxis, Tooltip, Line, CartesianGrid, YAxis, ResponsiveContainer, ReferenceArea } from 'recharts';
+import strsQuery from './strs.graphql';
 import s from './Home.css';
 
-class Home extends React.Component {
-  static propTypes = {
-    data: PropTypes.shape({
-      loading: PropTypes.bool.isRequired,
-      news: PropTypes.arrayOf(
-        PropTypes.shape({
-          title: PropTypes.string.isRequired,
-          link: PropTypes.string.isRequired,
-          content: PropTypes.string
-        })
-      )
-    }).isRequired
+const getAxisYDomain = (data, from, to, ref, offset) => {
+  console.log('slicing data', data);
+  const refData = data.slice(from - 1, to);
+  let [bottom, top] = [refData[0][ref], refData[0][ref]];
+  refData.forEach(d => {
+    if (d[ref] > top) top = d[ref];
+    if (d[ref] < bottom) bottom = d[ref];
+  });
+
+  return [(bottom | 0) - offset, (top | 0) + offset]; /* eslint-disable-line no-bitwise */
+};
+
+type SpeedTestSample = {
+  download: number,
+  upload: number,
+  originalUpload: number,
+  originalDownload: number,
+  createdAt: string,
+  updatedAt: string,
+  timestamp: null,
+  index: number
+};
+
+type Props = {
+  data: {
+    speedTestSamples: Array<SpeedTestSample>,
+    loading: boolean
+  }
+};
+
+class Home extends React.Component<Props> {
+  state = {
+    left: 'dataMin',
+    right: 'dataMax',
+    refAreaLeft: '',
+    refAreaRight: '',
+    top: 'dataMax+1',
+    bottom: 'dataMin-1',
+    top2: 'dataMax+20',
+    bottom2: 'dataMin-20',
+    animation: true
+  };
+
+  zoom = () => {
+    let { refAreaLeft, refAreaRight } = this.state;
+    const {
+      data: { speedTestSamples: data }
+    } = this.props;
+    if (refAreaLeft === refAreaRight || refAreaRight === '') {
+      this.setState(() => ({
+        refAreaLeft: '',
+        refAreaRight: ''
+      }));
+      return;
+    }
+
+    // xAxis domain
+    if (refAreaLeft > refAreaRight) [refAreaLeft, refAreaRight] = [refAreaRight, refAreaLeft];
+
+    // yAxis domain
+    const [bottom, top] = getAxisYDomain(data, refAreaLeft, refAreaRight, 'download', 1);
+    const [bottom2, top2] = getAxisYDomain(data, refAreaLeft, refAreaRight, 'upload', 1);
+
+    this.setState(() => ({
+      refAreaLeft: '',
+      refAreaRight: '',
+      data: data.slice(),
+      left: refAreaLeft,
+      right: refAreaRight,
+      bottom,
+      top,
+      bottom2,
+      top2
+    }));
+  };
+
+  zoomOut = () => {
+    const {
+      data: { speedTestSamples }
+    } = this.props;
+    this.setState(() => ({
+      data: speedTestSamples.slice(),
+      refAreaLeft: '',
+      refAreaRight: '',
+      left: 'dataMin',
+      right: 'dataMax',
+      top: 'dataMax+1',
+      bottom: 'dataMin',
+      top2: 'dataMax+50',
+      bottom2: 'dataMin+50'
+    }));
   };
 
   render() {
     const {
-      data: { loading, reactjsGetAllNews }
+      data: { speedTestSamples }
     } = this.props;
+    const { left, right, refAreaLeft, refAreaRight, top, bottom, left2, right2 } = this.state;
+
     return (
       <div className={s.root}>
         <div className={s.container}>
-          <h1>React.js News</h1>
-          {loading
-            ? 'Loading...'
-            : reactjsGetAllNews.map(item => (
-                <article key={item.link} className={s.newsItem}>
-                  <h1 className={s.newsTitle}>
-                    <a href={item.link}>{item.title}</a>
-                  </h1>
-                  <div
-                    className={s.newsDesc}
-                    // eslint-disable-next-line react/no-danger
-                    dangerouslySetInnerHTML={{ __html: item.content }}
-                  />
-                </article>
-              ))}
+          <ResponsiveContainer width="100%" height={400}>
+            <LineChart
+              onMouseDown={e => this.setState({ refAreaLeft: e.activeLabel })}
+              onMouseMove={e => this.state.refAreaLeft && this.setState({ refAreaRight: e.activeLabel })}
+              onMouseUp={this.zoom}
+              data={speedTestSamples}
+              margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+            >
+              <XAxis dataKey="createdAt" allowDataOverflow domain={['dataMin', 'dataMax']} />
+              <YAxis type="number" yAxisId={0} dataKey="download" allowDataOverflow domain={['dataMin', 'dataMax']} />
+              {/* <YAxis
+                type="number"
+                orientation="right"
+                yAxisId={1}
+                dataKey="download"
+                allowDataOverflow
+                domain={[left2, right2]}
+              /> */}
+              <Tooltip />
+              <CartesianGrid stroke="#f5f5f5" />
+              <Line type="monotone" dataKey="upload" stroke="#ff7300" yAxisId={0} animationDuration={300} />
+              <Line type="monotone" dataKey="download" stroke="#387908" yAxisId={0} animationDuration={300} />
+              {refAreaLeft && refAreaRight ? (
+                <ReferenceArea yAxisId={0} x1={refAreaLeft} x2={refAreaRight} strokeOpacity={0.3} />
+              ) : null}
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
     );
@@ -58,5 +143,5 @@ class Home extends React.Component {
 
 export default compose(
   withStyles(s),
-  graphql(newsQuery)
+  graphql(strsQuery)
 )(Home);

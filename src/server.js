@@ -21,6 +21,9 @@ import React from 'react';
 import ReactDOM from 'react-dom/server';
 import { getDataFromTree } from 'react-apollo';
 import PrettyError from 'pretty-error';
+
+import SpeedTest from 'core/speedtest/speedtest';
+
 import createApolloClient from './core/createApolloClient';
 import App from './components/App';
 import Html from './components/Html';
@@ -29,7 +32,7 @@ import errorPageStyle from './routes/error/ErrorPage.css';
 import createFetch from './createFetch';
 import passport from './passport';
 import router from './router';
-import models from './data/models';
+import models, { SpeedTestResult } from './data/models';
 import schema from './data/schema';
 // import assets from './asset-manifest.json'; // eslint-disable-line import/no-unresolved
 import chunks from './chunk-manifest.json'; // eslint-disable-line import/no-unresolved
@@ -253,6 +256,10 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500);
   res.send(`<!doctype html>${html}`);
 });
+
+SpeedTest.schedule(1, ({ speeds }) => SpeedTestResult.create(speeds), error => console.log(error));
+// TODO: start the speedtest processor and attach response to db
+// From this perspective treat speedTest as a singleton
 
 //
 // Launch the server
