@@ -1,8 +1,21 @@
 # TODO:
 #   * Add time period
 #   * Add group by (non-resample)
-query GetAllSTRs($input: SpeedTestResultsInput) {
-  SpeedTestResults(input: $input) {
+# query GetAllSTRs($input: SpeedTestResultsInput) {
+#   SpeedTestResults(input: $input) {
+#     count
+#     timing
+#     data {
+#       download
+#       upload
+#       timestamp
+#       index
+#     }
+#   }
+# }
+
+query GetAllSTRs($resample: AllowedResamplings, $start: String, $end: String) {
+  SpeedTestResults(resample: $resample, end: $end, start: $start) {
     count
     timing
     data {

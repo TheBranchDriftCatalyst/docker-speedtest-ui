@@ -7,7 +7,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import DataType from 'sequelize';
+import DataType, { Op } from 'sequelize';
+import { set, assign, compact, toNumber, chain, mergeWith } from 'lodash';
+import { moment } from 'moment';
 import Model from '../sequelize';
 
 const SpeedTestResult = Model.define('SpeedTestResult', {
@@ -15,8 +17,61 @@ const SpeedTestResult = Model.define('SpeedTestResult', {
   upload: { type: DataType.FLOAT },
   // originalDownload: { type: DataType.INTEGER },
   // originalUpload: { type: DataType.INTEGER },
-  timestamp: { type: DataType.INTEGER, primaryKey: true },
-  index: { type: DataType.INTEGER, autoIncrement: true }
+  timestamp: { type: DataType.INTEGER },
+  index: { type: DataType.INTEGER, autoIncrement: true, primaryKey: true }
+});
+
+SpeedTestResult.helpers = assign(SpeedTestResult.helpers, {
+  resample: resamplePeriod => data =>
+    chain(data)
+      .groupBy(({ timestamp }) =>
+        moment(timestamp)
+          .endOf(resamplePeriod)
+          .format('x')
+      )
+      .transform((acum, gSamples, gName) => {
+        const [gSampleBase, ...restSamples] = gSamples;
+        // eslint-disable-next-line consistent-return
+        const sum = mergeWith(gSampleBase, restSamples, (objV, srcV, key) => {
+          if (key === 'download' || key === 'upload') {
+            return objV + srcV;
+          }
+        });
+        acum.push({
+          upload: sum.upload / (gSamples.length + 1),
+          download: sum.download / (gSamples.length + 1),
+          timestamp: gName,
+          index: gSampleBase.index
+        });
+      }, [])
+      .value(),
+  defaultGetAll: async (startDate, endDate) => {
+    const findQuery = {
+      attributes: {
+        include: ['download', 'upload', 'timestamp', 'index']
+      },
+      // Always want ascending order
+      order: [['index', 'ASC']]
+    };
+
+    if (startDate || endDate) {
+      set(findQuery, 'where', {
+        [Op.and]: compact([
+          startDate && {
+            timestamp: {
+              [Op.gte]: toNumber(startDate)
+            }
+          },
+          endDate && {
+            timestamp: {
+              [Op.lte]: toNumber(endDate)
+            }
+          }
+        ])
+      });
+    }
+    return SpeedTestResult.findAll(findQuery);
+  }
 });
 
 export default SpeedTestResult;

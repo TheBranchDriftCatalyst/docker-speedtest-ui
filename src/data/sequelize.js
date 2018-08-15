@@ -12,6 +12,7 @@ import config from '../config';
 
 const sequelize = new Sequelize(config.databaseUrl, {
   operatorsAliases: Op,
+  omitNull: true,
   define: {
     freezeTableName: true
   }

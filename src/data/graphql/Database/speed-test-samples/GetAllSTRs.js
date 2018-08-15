@@ -40,73 +40,24 @@ export const schema = [
 export const queries = [
   `
   # Retrieves all speed test result samples with optional grouping strategy
-  SpeedTestResults(input: SpeedTestResultsInput): SpeedTestResults
+  SpeedTestResults(resample: AllowedResamplings, end: String, start: String): SpeedTestResults
   `
 ];
 
 export const resolvers = {
   RootQuery: {
-    async SpeedTestResults(parent, { input }) {
-
-      console.log('******************************************************************************************')
-      console.log('Input Variables: ', input)
-      console.log('******************************************************************************************')
-
-      const {start: startDate, end: endDate, resample: resamplePeriod} = input || {};
-
-      const findQuery = {
-        attributes: {
-          include: ['download', 'upload', 'timestamp', 'index']
-        }
-      };
-
-      if (startDate || endDate) {
-        set(findQuery, 'where', {
-          [Op.and]: compact([
-            startDate && {
-              timestamp: {
-                [Op.gte]: toNumber(startDate)
-              }
-            },
-            endDate && {
-              timestamp: {
-                [Op.lte]: toNumber(endDate)
-              }
-            }
-          ])
-        });
-      }
-      let data = await SpeedTestResult.findAll(findQuery);
-      const start = new Date().getTime();
+    async SpeedTestResults(parent, { start: startDate, end: endDate, resample: resamplePeriod }) {
+      let data = await SpeedTestResult.helpers.defaultGetAll(startDate, endDate);
+      let [t0, t1] = [0, 0];
       if (resamplePeriod !== 'none') {
-        data = chain(data)
-          .groupBy(({ timestamp }) =>
-            toNumber(
-              moment(timestamp)
-                .endOf(resamplePeriod)
-                .format('x')
-            )
-          )
-          .transform((acum, gSamples, gName) => {
-            const [gSampleBase, ...restSamples] = gSamples;
-            // eslint-disable-next-line consistent-return
-            const sum = mergeWith(gSampleBase, restSamples, (objV, srcV, key) => {
-              if (key === 'download' || key === 'upload') {
-                return objV + srcV;
-              }
-            });
-            acum.push({
-              upload: sum.upload / (gSamples.length + 1),
-              download: sum.download / (gSamples.length + 1),
-              timestamp: gName
-            });
-          }, [])
-          .value();
+        t0 = new Date().getTime();
+        data = SpeedTestResult.helpers.resample(resamplePeriod);
+        t1 = new Date().getTime();
+        console.info('SpeedTestResampling took', t1 - t0);
       }
-      const end = new Date().getTime();
       return {
         data,
-        timing: (end - start) / 1000
+        timing: (t1 - t0) / 1000
       };
     }
   },

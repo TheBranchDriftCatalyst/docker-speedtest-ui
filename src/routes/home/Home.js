@@ -1,6 +1,7 @@
 /* @flow */
 import React from 'react';
 import { graphql, compose } from 'react-apollo';
+import { round, get } from 'lodash';
 import moment from 'moment';
 import withStyles from 'isomorphic-style-loader/lib/withStyles';
 import { LineChart, XAxis, Tooltip, Line, CartesianGrid, YAxis, ResponsiveContainer, ReferenceArea } from 'recharts';
@@ -27,7 +28,11 @@ type SpeedTestSample = {
 
 type Props = {
   data: {
-    SpeedTestResults: Array<SpeedTestSample>,
+    SpeedTestResults: {
+      data: Array<SpeedTestSample>,
+      count: number | null,
+      timing: string | number
+    },
     loading: boolean
   }
 };
@@ -95,13 +100,13 @@ class Home extends React.Component<Props> {
     }));
   };
 
+  getDateFormat() {
+    return 'MM/DD HH:mm'
+  }
+
   render() {
     const { left, right, refAreaLeft, refAreaRight, top, bottom, left2, right2 } = this.state;
-    const {
-      data: {
-        SpeedTestResults: { data, count, loading }
-      }
-    } = this.props;
+    const { data: { startPolling, SpeedTestResults: { data, count, loading } = {} } = {} } = this.props;
 
     if (loading) {
       return (
@@ -110,6 +115,8 @@ class Home extends React.Component<Props> {
         </div>
       );
     }
+
+    startPolling(60000);
 
     return (
       <div className={s.root}>
@@ -120,19 +127,23 @@ class Home extends React.Component<Props> {
               onMouseMove={e => this.state.refAreaLeft && this.setState({ refAreaRight: e.activeLabel })}
               onMouseUp={this.zoom}
               data={data}
-              margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+              margin={{ top: 5, right: 20, left: 10, bottom: 0 }}
             >
-              <XAxis dataKey="createdAt" allowDataOverflow domain={['dataMin', 'dataMax']} />
-              <YAxis type="number" yAxisId={0} dataKey="download" allowDataOverflow domain={['dataMin', 'dataMax']} />
-              {/* <YAxis
+              <XAxis
+                tickFormatter={v => moment(Number(get(data, [v, 'timestamp']))).format(this.getDateFormat())}
+                tick={{ offset: -10, position: 'bottom' }}
+                dataKey="index"
+                // domain={['dataMin', 'dataMax']}
+              />
+              <YAxis
+                tickFormatter={v => round(v, 2)}
+                label={{ value: 'MBs', angle: -90, position: 'left', offset: 0 }}
                 type="number"
-                orientation="right"
-                yAxisId={1}
+                yAxisId={0}
                 dataKey="download"
-                allowDataOverflow
-                domain={[left2, right2]}
-              /> */}
-              <Tooltip />
+                // domain={['dataMin', 'dataMax']}
+              />
+              <Tooltip labelFormatter={v => `${moment(Number(get(data, [v, 'timestamp']))).format(this.getDateFormat())}`} />
               <CartesianGrid stroke="#f5f5f5" />
               <Line type="monotone" dataKey="upload" stroke="#ff7300" yAxisId={0} animationDuration={300} />
               <Line type="monotone" dataKey="download" stroke="#387908" yAxisId={0} animationDuration={300} />
@@ -150,16 +161,14 @@ class Home extends React.Component<Props> {
 export default compose(
   withStyles(s),
   graphql(strsQuery, {
-    // options: {
-    //   variables: {
-    //     input: {
-    //       start: moment()
-    //         .startOf('month')
-    //         .format('x'),
-    //       end: moment().format('x'),
-    //       resample: 'day'
-    //     }
-    //   }
-    // }
+    options: {
+      variables: {
+        start: moment()
+          .startOf('month')
+          .format('x'),
+        end: moment().format('x'),
+        resample: 'none'
+      }
+    }
   })
 )(Home);
