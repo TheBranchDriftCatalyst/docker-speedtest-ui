@@ -21,9 +21,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/server';
 import { getDataFromTree } from 'react-apollo';
 import PrettyError from 'pretty-error';
-
+import { assign } from 'lodash';
 import SpeedTest from 'core/speedtest/speedtest';
-
 import createApolloClient from './core/createApolloClient';
 import App from './components/App';
 import Html from './components/Html';
@@ -257,7 +256,16 @@ app.use((err, req, res, next) => {
   res.send(`<!doctype html>${html}`);
 });
 
-SpeedTest.schedule(1, ({ speeds }) => SpeedTestResult.create(speeds), error => console.log(error));
+const SpeedTestJob = SpeedTest.schedule(
+  '*/1 * * * *',
+  // '00,15,30,45 * * * *', // x:45, x:30, x:15, x:00
+  ({ speeds, meta }) => {
+    const result = assign({}, speeds, meta);
+    SpeedTestResult.create(result);
+  },
+  error => console.warn(error)
+);
+
 // TODO: start the speedtest processor and attach response to db
 // From this perspective treat speedTest as a singleton
 

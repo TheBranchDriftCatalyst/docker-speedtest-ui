@@ -1,6 +1,7 @@
 /* @flow */
 import React from 'react';
 import { graphql, compose } from 'react-apollo';
+import moment from 'moment';
 import withStyles from 'isomorphic-style-loader/lib/withStyles';
 import { LineChart, XAxis, Tooltip, Line, CartesianGrid, YAxis, ResponsiveContainer, ReferenceArea } from 'recharts';
 import strsQuery from './strs.graphql';
@@ -21,17 +22,12 @@ const getAxisYDomain = (data, from, to, ref, offset) => {
 type SpeedTestSample = {
   download: number,
   upload: number,
-  originalUpload: number,
-  originalDownload: number,
-  createdAt: string,
-  updatedAt: string,
-  timestamp: null,
-  index: number
+  timestamp: string
 };
 
 type Props = {
   data: {
-    speedTestSamples: Array<SpeedTestSample>,
+    SpeedTestResults: Array<SpeedTestSample>,
     loading: boolean
   }
 };
@@ -52,7 +48,7 @@ class Home extends React.Component<Props> {
   zoom = () => {
     let { refAreaLeft, refAreaRight } = this.state;
     const {
-      data: { speedTestSamples: data }
+      data: { SpeedTestResults: data }
     } = this.props;
     if (refAreaLeft === refAreaRight || refAreaRight === '') {
       this.setState(() => ({
@@ -84,10 +80,10 @@ class Home extends React.Component<Props> {
 
   zoomOut = () => {
     const {
-      data: { speedTestSamples }
+      data: { SpeedTestResults }
     } = this.props;
     this.setState(() => ({
-      data: speedTestSamples.slice(),
+      data: SpeedTestResults.slice(),
       refAreaLeft: '',
       refAreaRight: '',
       left: 'dataMin',
@@ -100,10 +96,20 @@ class Home extends React.Component<Props> {
   };
 
   render() {
-    const {
-      data: { speedTestSamples }
-    } = this.props;
     const { left, right, refAreaLeft, refAreaRight, top, bottom, left2, right2 } = this.state;
+    const {
+      data: {
+        SpeedTestResults: { data, count, loading }
+      }
+    } = this.props;
+
+    if (loading) {
+      return (
+        <div className={s.root}>
+          <div className={s.container}>Loading...</div>
+        </div>
+      );
+    }
 
     return (
       <div className={s.root}>
@@ -113,7 +119,7 @@ class Home extends React.Component<Props> {
               onMouseDown={e => this.setState({ refAreaLeft: e.activeLabel })}
               onMouseMove={e => this.state.refAreaLeft && this.setState({ refAreaRight: e.activeLabel })}
               onMouseUp={this.zoom}
-              data={speedTestSamples}
+              data={data}
               margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
             >
               <XAxis dataKey="createdAt" allowDataOverflow domain={['dataMin', 'dataMax']} />
@@ -143,5 +149,17 @@ class Home extends React.Component<Props> {
 
 export default compose(
   withStyles(s),
-  graphql(strsQuery)
+  graphql(strsQuery, {
+    // options: {
+    //   variables: {
+    //     input: {
+    //       start: moment()
+    //         .startOf('month')
+    //         .format('x'),
+    //       end: moment().format('x'),
+    //       resample: 'day'
+    //     }
+    //   }
+    // }
+  })
 )(Home);

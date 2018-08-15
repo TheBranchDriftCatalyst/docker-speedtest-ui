@@ -35,4 +35,6 @@ async function build() {
   }
 }
 
+// docker build -p 3000 -t sui .
+
 export default build;

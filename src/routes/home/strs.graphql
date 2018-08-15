@@ -1,12 +1,15 @@
-query GetAllSTRs {
-  speedTestSamples: databaseGetAllSTRs {
-    download
-    upload
-    originalUpload
-    originalDownload
-    createdAt
-    updatedAt
-    timestamp
-    index
+# TODO:
+#   * Add time period
+#   * Add group by (non-resample)
+query GetAllSTRs($input: SpeedTestResultsInput) {
+  SpeedTestResults(input: $input) {
+    count
+    timing
+    data {
+      download
+      upload
+      timestamp
+      index
+    }
   }
 }

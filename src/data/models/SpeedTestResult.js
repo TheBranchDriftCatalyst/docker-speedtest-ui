@@ -13,9 +13,10 @@ import Model from '../sequelize';
 const SpeedTestResult = Model.define('SpeedTestResult', {
   download: { type: DataType.FLOAT },
   upload: { type: DataType.FLOAT },
-  originalDownload: { type: DataType.INTEGER },
-  originalUpload: { type: DataType.INTEGER },
-  index: { type: DataType.INTEGER, autoIncrement: true, primaryKey: true }
+  // originalDownload: { type: DataType.INTEGER },
+  // originalUpload: { type: DataType.INTEGER },
+  timestamp: { type: DataType.INTEGER, primaryKey: true },
+  index: { type: DataType.INTEGER, autoIncrement: true }
 });
 
 export default SpeedTestResult;
