@@ -101,7 +101,7 @@ class Home extends React.Component<Props> {
   };
 
   getDateFormat() {
-    return 'MM/DD HH:mm'
+    return 'MM/DD HH:mm';
   }
 
   render() {
@@ -143,12 +143,14 @@ class Home extends React.Component<Props> {
                 dataKey="download"
                 // domain={['dataMin', 'dataMax']}
               />
-              <Tooltip labelFormatter={v => `${moment(Number(get(data, [v, 'timestamp']))).format(this.getDateFormat())}`} />
+              <Tooltip
+                labelFormatter={v => `${moment(Number(get(data, [v, 'timestamp']))).format(this.getDateFormat())}`}
+              />
               <CartesianGrid stroke="#f5f5f5" />
               <Line type="monotone" dataKey="upload" stroke="#ff7300" yAxisId={0} animationDuration={300} />
               <Line type="monotone" dataKey="download" stroke="#387908" yAxisId={0} animationDuration={300} />
               {refAreaLeft && refAreaRight ? (
-                <ReferenceArea yAxisId={0} x1={refAreaLeft} x2={refAreaRight} strokeOpacity={0.3} />
+                <ReferenceArea yAxisId={0} x1={refAreaLeft} x2={refAreaRight} strokeOpacity={0.1} />
               ) : null}
             </LineChart>
           </ResponsiveContainer>

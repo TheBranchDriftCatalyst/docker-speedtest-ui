@@ -45,12 +45,18 @@ SpeedTestResult.helpers = assign(SpeedTestResult.helpers, {
         });
       }, [])
       .value(),
+  /**
+   * Default interface for the dataset get
+   * @param  {[type]}  startDate unix ms timestamp as a string
+   * @param  {[type]}  endDate   unix ms timestamp as a string
+   * @return {Promise}
+   */
   defaultGetAll: async (startDate, endDate) => {
     const findQuery = {
       attributes: {
         include: ['download', 'upload', 'timestamp', 'index']
       },
-      // Always want ascending order
+      // Always want ascending order for time series data
       order: [['index', 'ASC']]
     };
 
